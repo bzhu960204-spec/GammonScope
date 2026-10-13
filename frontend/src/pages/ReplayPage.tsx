@@ -252,7 +252,7 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
             className={i === gameIndex ? 'tab active' : 'tab'}
             onClick={() => selectGame(i)}
           >
-            Game {g.gameNumber + 1}
+            Game {g.gameNumber}
           </button>
         ))}
       </div>

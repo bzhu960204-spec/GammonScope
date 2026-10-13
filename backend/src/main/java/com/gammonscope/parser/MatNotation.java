@@ -75,6 +75,12 @@ public final class MatNotation {
         }
         try {
             int p = Integer.parseInt(s);
+            if (p == 0) {
+                return -1; // GridGammon numeric convention: 0 = off (bear off)
+            }
+            if (p == 25) {
+                return 24; // GridGammon numeric convention: 25 = bar (entering point)
+            }
             if (p < 1 || p > 24) {
                 return null;
             }
