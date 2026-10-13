@@ -126,6 +126,43 @@ export async function deleteMatch(id: number): Promise<void> {
   }
 }
 
+export interface MatchMetadataInput {
+  player0: string
+  player1: string
+  matchLength: number
+  variation: string
+  result: string
+  event: string
+  site: string
+  round: string
+  matchDate: string
+}
+
+export async function createMatch(meta: MatchMetadataInput): Promise<number> {
+  const res = await fetch(`${API_BASE}/matches`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(meta),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.error ?? `Create failed: ${res.status}`)
+  }
+  const body = (await res.json()) as { id: number }
+  return body.id
+}
+
+export async function updateMatchMeta(id: number, meta: MatchMetadataInput): Promise<void> {
+  const res = await fetch(`${API_BASE}/matches/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(meta),
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to save match info: ${res.status}`)
+  }
+}
+
 export async function updateMoveComment(
   matchId: number,
   gameIndex: number,

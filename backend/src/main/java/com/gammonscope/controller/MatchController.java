@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.gammonscope.dto.MatchMetadata;
 import com.gammonscope.dto.MatchSummary;
 import com.gammonscope.model.BgMatch;
 import com.gammonscope.parser.ImportException;
@@ -58,11 +59,27 @@ public class MatchController {
         return matchService.listSummaries();
     }
 
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> create(@RequestBody MatchMetadata meta) {
+        BgMatch saved = matchService.createMatch(meta);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "id", saved.getId(),
+                "games", saved.getGames().size(),
+                "sourceFormat", saved.getSourceFormat()));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<BgMatch> get(@PathVariable Long id) {
         return matchService.getMatch(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Void> updateMetadata(@PathVariable Long id, @RequestBody MatchMetadata meta) {
+        return matchService.updateMetadata(id, meta)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")

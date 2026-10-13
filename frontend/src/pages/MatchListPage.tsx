@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  createMatch,
   deleteMatch,
   importMatch,
   listMatches,
   type MatchSummary,
 } from '../api/client'
+import MatchMetaDialog, { emptyMeta } from '../components/MatchMetaDialog'
 
 interface Props {
   onOpen: (id: number) => void
@@ -32,6 +34,10 @@ export default function MatchListPage({ onOpen }: Props) {
   const [dragging, setDragging] = useState(false)
   const [uploads, setUploads] = useState<UploadItem[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const [creating, setCreating] = useState(false)
+  const [savingNew, setSavingNew] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
   async function refresh() {
     try {
@@ -115,10 +121,27 @@ export default function MatchListPage({ onOpen }: Props) {
     }
   }
 
+  async function onCreate(meta: Parameters<typeof createMatch>[0]) {
+    setSavingNew(true)
+    setCreateError(null)
+    try {
+      const id = await createMatch(meta)
+      setCreating(false)
+      onOpen(id)
+    } catch (e) {
+      setCreateError((e as Error).message)
+    } finally {
+      setSavingNew(false)
+    }
+  }
+
   return (
     <div>
       <section className="panel">
-        <h2>Import a match</h2>
+        <div className="panel-head">
+          <h2>Import a match</h2>
+          <button onClick={() => { setCreateError(null); setCreating(true) }}>+ New match</button>
+        </div>
         <p className="hint">Supported formats: Jellyfish <code>.mat</code>, GNU Backgammon <code>.sgf</code> and GammonScope <code>.json</code>.</p>
         <div
           className={`dropzone${dragging ? ' dragging' : ''}${busy ? ' busy' : ''}`}
@@ -201,6 +224,17 @@ export default function MatchListPage({ onOpen }: Props) {
           </table>
         )}
       </section>
+
+      {creating && (
+        <MatchMetaDialog
+          title="New match"
+          initial={emptyMeta()}
+          saving={savingNew}
+          error={createError}
+          onCancel={() => setCreating(false)}
+          onSave={onCreate}
+        />
+      )}
     </div>
   )
 }

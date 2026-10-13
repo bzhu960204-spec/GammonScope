@@ -3,12 +3,15 @@ import {
   exportUrl,
   getMatch,
   requestHint,
+  updateMatchMeta,
   updateMoveComment,
   type EvalMove,
   type MatchDetail,
+  type MatchMetadataInput,
   type MoveDto,
 } from '../api/client'
 import Board from '../components/Board'
+import MatchMetaDialog from '../components/MatchMetaDialog'
 import { buildStates, matchId, pipCount, positionId } from '../engine/board'
 
 interface Props {
@@ -26,6 +29,9 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
   const [hint, setHint] = useState<EvalMove[] | null>(null)
   const [hintLoading, setHintLoading] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [savingMeta, setSavingMeta] = useState(false)
+  const [metaError, setMetaError] = useState<string | null>(null)
   const [flipV, setFlipV] = useState(() => localStorage.getItem('gs.flipV') === '1')
   const [flipH, setFlipH] = useState(() => localStorage.getItem('gs.flipH') === '1')
   const [showNumbers, setShowNumbers] = useState(() => localStorage.getItem('gs.showNumbers') !== '0')
@@ -174,6 +180,20 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
     }
   }
 
+  async function saveMeta(meta: MatchMetadataInput) {
+    setSavingMeta(true)
+    setMetaError(null)
+    try {
+      await updateMatchMeta(id, meta)
+      setMatch((prev) => (prev ? { ...prev, ...meta } : prev))
+      setEditing(false)
+    } catch (e) {
+      setMetaError((e as Error).message)
+    } finally {
+      setSavingMeta(false)
+    }
+  }
+
   // Player on roll at the current position, used for the gnubg Position / Match IDs.
   const nextMove = game.moves[moveIndex]
   const prevMove = moveIndex > 0 ? game.moves[moveIndex - 1] : undefined
@@ -240,6 +260,7 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
           {match.matchLength > 0 ? ` — ${match.matchLength}pt match` : ' — money session'}
         </h2>
         <div className="export-row">
+          <button className="ghost" onClick={() => { setMetaError(null); setEditing(true) }}>Edit info</button>
           <a className="ghost" href={exportUrl(id, 'mat')}>Export .mat</a>
           <a className="ghost" href={exportUrl(id, 'sgf')}>Export .sgf</a>
         </div>
@@ -408,6 +429,27 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
           )}
         </div>
       </div>
+
+      {editing && (
+        <MatchMetaDialog
+          title="Edit match info"
+          initial={{
+            player0: match.player0,
+            player1: match.player1,
+            matchLength: match.matchLength,
+            variation: match.variation ?? '',
+            result: match.result ?? '',
+            event: match.event ?? '',
+            site: match.site ?? '',
+            round: match.round ?? '',
+            matchDate: match.matchDate ?? '',
+          }}
+          saving={savingMeta}
+          error={metaError}
+          onCancel={() => setEditing(false)}
+          onSave={saveMeta}
+        />
+      )}
     </div>
   )
 }
