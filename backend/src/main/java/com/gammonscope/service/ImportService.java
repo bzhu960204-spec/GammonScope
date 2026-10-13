@@ -37,7 +37,7 @@ public class ImportService {
                 .filter(p -> p.supports(fileName, content))
                 .findFirst()
                 .orElseThrow(() -> new ImportException(
-                        "Unsupported file format. Only .mat and .sgf files are supported."));
+                        "Unsupported file format. Only .mat, .sgf and .json files are supported."));
 
         ParsedMatch parsed = parser.parse(content, fileName);
         deriveResults(parsed);

@@ -10,7 +10,7 @@ interface Props {
   onOpen: (id: number) => void
 }
 
-const ACCEPTED_EXTENSIONS = ['.mat', '.sgf']
+const ACCEPTED_EXTENSIONS = ['.mat', '.sgf', '.json']
 
 type UploadStatus = 'pending' | 'uploading' | 'done' | 'error'
 
@@ -56,7 +56,7 @@ export default function MatchListPage({ onOpen }: Props) {
     const rejected = files.filter((f) => !isAccepted(f))
 
     if (accepted.length === 0) {
-      setError('No supported files selected. Only .mat and .sgf files are accepted.')
+      setError('No supported files selected. Only .mat, .sgf and .json files are accepted.')
       return
     }
 
@@ -119,7 +119,7 @@ export default function MatchListPage({ onOpen }: Props) {
     <div>
       <section className="panel">
         <h2>Import a match</h2>
-        <p className="hint">Supported formats: Jellyfish <code>.mat</code> and GNU Backgammon <code>.sgf</code>.</p>
+        <p className="hint">Supported formats: Jellyfish <code>.mat</code>, GNU Backgammon <code>.sgf</code> and GammonScope <code>.json</code>.</p>
         <div
           className={`dropzone${dragging ? ' dragging' : ''}${busy ? ' busy' : ''}`}
           onClick={() => !busy && fileRef.current?.click()}
@@ -133,7 +133,7 @@ export default function MatchListPage({ onOpen }: Props) {
           <input
             ref={fileRef}
             type="file"
-            accept=".mat,.sgf"
+            accept=".mat,.sgf,.json"
             multiple
             hidden
             onChange={onInputChange}
