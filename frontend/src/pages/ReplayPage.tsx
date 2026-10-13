@@ -26,6 +26,19 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
   const [hint, setHint] = useState<EvalMove[] | null>(null)
   const [hintLoading, setHintLoading] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
+  const [flipV, setFlipV] = useState(() => localStorage.getItem('gs.flipV') === '1')
+  const [flipH, setFlipH] = useState(() => localStorage.getItem('gs.flipH') === '1')
+  const [showNumbers, setShowNumbers] = useState(() => localStorage.getItem('gs.showNumbers') !== '0')
+
+  useEffect(() => {
+    localStorage.setItem('gs.flipV', flipV ? '1' : '0')
+  }, [flipV])
+  useEffect(() => {
+    localStorage.setItem('gs.flipH', flipH ? '1' : '0')
+  }, [flipH])
+  useEffect(() => {
+    localStorage.setItem('gs.showNumbers', showNumbers ? '1' : '0')
+  }, [showNumbers])
 
   useEffect(() => {
     getMatch(id)
@@ -41,8 +54,13 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
   const states = useMemo(() => (game ? buildStates(game) : []), [game])
   const board = states[moveIndex] ?? states[0]
 
-  // The move whose annotation we edit is the one that produced the current position.
-  const currentMove = game && moveIndex > 0 ? game.moves[moveIndex - 1] : undefined
+  // Fold the flat half-move list into gnubg-style rows: player 0 on the left,
+  // player 1 on the right. A new row starts whenever a column is already taken,
+  // so cube actions, resigns and SET records land in the acting player's column.
+  const moveRows = useMemo(() => buildMoveRows(game?.moves ?? []), [game])
+
+  // The selected move is the one about to be played from the current position.
+  const currentMove = game ? game.moves[moveIndex] : undefined
 
   useEffect(() => {
     setCommentDraft(currentMove?.comment ?? '')
@@ -53,6 +71,67 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
     setHint(null)
     setHintError(null)
   }, [moveIndex, gameIndex])
+
+  // Left/right (and Home/End) arrow keys step through the position history,
+  // up/down switch games; disabled while typing in an input.
+  const lastIndex = states.length - 1
+  const gameCount = match?.games.length ?? 0
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey || e.altKey || e.metaKey) {
+        return
+      }
+      const el = document.activeElement as HTMLElement | null
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.isContentEditable)
+      ) {
+        return
+      }
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault()
+          setMoveIndex((i) => Math.max(0, i - 1))
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          setMoveIndex((i) => Math.min(lastIndex, i + 1))
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setGameIndex((g) => {
+            const next = Math.max(0, g - 1)
+            if (next !== g) {
+              setMoveIndex(0)
+            }
+            return next
+          })
+          break
+        case 'ArrowDown':
+          e.preventDefault()
+          setGameIndex((g) => {
+            const next = Math.min(gameCount - 1, g + 1)
+            if (next !== g) {
+              setMoveIndex(0)
+            }
+            return next
+          })
+          break
+        case 'Home':
+          e.preventDefault()
+          setMoveIndex(0)
+          break
+        case 'End':
+          e.preventDefault()
+          setMoveIndex(lastIndex)
+          break
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [lastIndex, gameCount])
 
   if (error) {
     return (
@@ -72,7 +151,7 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
   }
 
   async function saveComment() {
-    if (!game || moveIndex === 0 || !currentMove) {
+    if (!game || !currentMove) {
       return
     }
     setSavingComment(true)
@@ -83,7 +162,7 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
           return prev
         }
         const next = structuredClone(prev)
-        const mv = next.games[gameIndex].moves[moveIndex - 1]
+        const mv = next.games[gameIndex].moves[moveIndex]
         mv.comment = commentDraft.trim() === '' ? undefined : commentDraft
         return next
       })
@@ -95,12 +174,18 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
     }
   }
 
-  const lastIndex = states.length - 1
-
   // Player on roll at the current position, used for the gnubg Position / Match IDs.
   const nextMove = game.moves[moveIndex]
   const prevMove = moveIndex > 0 ? game.moves[moveIndex - 1] : undefined
   const onRoll = nextMove ? nextMove.player : prevMove ? 1 - prevMove.player : 0
+
+  // Show the position the player faced for the selected move: the current
+  // checkers with the upcoming roll, without playing the move out (GNU style).
+  const displayBoard = {
+    ...board,
+    dice: [nextMove?.dice0 ?? 0, nextMove?.dice1 ?? 0] as [number, number],
+    turn: nextMove ? nextMove.player : board.turn,
+  }
   const doubled = nextMove?.type === 'TAKE' || nextMove?.type === 'DROP'
   const posId = positionId(board, onRoll)
   const mId = matchId(board, {
@@ -141,6 +226,11 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
   const bestEquity = hint && hint.length > 0 ? hint[0].equity : 0
   const playedPairs = sortedPairs(nextMove?.moves)
 
+  // Score / pip labels follow the horizontal mirror so they match the trays.
+  const side0 = { name: match.player0, score: game.score0, player: 0 }
+  const side1 = { name: match.player1, score: game.score1, player: 1 }
+  const [left, right] = flipH ? [side1, side0] : [side0, side1]
+
   return (
     <div>
       <div className="replay-head">
@@ -170,14 +260,43 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
       <div className="replay-body">
         <div className="board-wrap">
           <div className="score-bar">
-            <span>{match.player0}: {game.score0}</span>
+            <span>{left.name}: {left.score}</span>
             <span>Cube: {board.cube}</span>
-            <span>{match.player1}: {game.score1}</span>
+            <span>{right.name}: {right.score}</span>
           </div>
-          <Board board={board} player0={match.player0} player1={match.player1} />
+          <Board
+            board={displayBoard}
+            player0={match.player0}
+            player1={match.player1}
+            orient={{ flipV, flipH }}
+            showNumbers={showNumbers}
+          />
+          <div className="view-controls">
+            <button
+              className={flipV ? 'ghost active' : 'ghost'}
+              onClick={() => setFlipV((v) => !v)}
+              title="Vertical flip: white / black perspective"
+            >
+              ⇅ Flip
+            </button>
+            <button
+              className={flipH ? 'ghost active' : 'ghost'}
+              onClick={() => setFlipH((v) => !v)}
+              title="Horizontal mirror: swap home board side"
+            >
+              ⇄ Mirror
+            </button>
+            <button
+              className={showNumbers ? 'ghost active' : 'ghost'}
+              onClick={() => setShowNumbers((v) => !v)}
+              title="Toggle point numbers"
+            >
+              # Numbers
+            </button>
+          </div>
           <div className="pip-bar">
-            <span>Pip {match.player0}: {pipCount(board, 0)}</span>
-            <span>Pip {match.player1}: {pipCount(board, 1)}</span>
+            <span>Pip {left.name}: {pipCount(board, left.player)}</span>
+            <span>Pip {right.name}: {pipCount(board, right.player)}</span>
           </div>
           <div className="id-bar">
             <div><span className="id-label">Position ID</span><code>{posId}</code></div>
@@ -229,7 +348,7 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
           </div>
           <div className="annotation">
             <label htmlFor="annotation">
-              Annotation {currentMove ? `(move ${moveIndex})` : '(start position — select a move to annotate)'}
+              Annotation {currentMove ? `(move ${moveIndex + 1})` : '(final position — step to a move to annotate)'}
             </label>
             <textarea
               id="annotation"
@@ -251,21 +370,37 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
 
         <div className="move-list">
           <h3>Moves</h3>
-          <ol>
-            {game.moves.map((mv, i) => (
-              <li
-                key={i}
-                className={i + 1 === moveIndex ? 'move current' : 'move'}
-                onClick={() => setMoveIndex(i + 1)}
-              >
-                <span className={mv.player === 0 ? 'who p0' : 'who p1'}>
-                  {mv.player === 0 ? match.player0 : match.player1}
-                </span>
-                <span className="desc">{describe(mv)}</span>
-                {mv.comment && <span className="move-comment" title={mv.comment}>💬</span>}
-              </li>
-            ))}
-          </ol>
+          <table className="move-grid">
+            <thead>
+              <tr>
+                <th className="move-num">#</th>
+                <th className="move-col p0">{match.player0}</th>
+                <th className="move-col p1">{match.player1}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {moveRows.map((row, r) => (
+                <tr key={r}>
+                  <td className="move-num">{r + 1}</td>
+                  {([row.p0, row.p1] as const).map((cell, col) => (
+                    <td key={col} className="move-cell">
+                      {cell && (
+                        <div
+                          className={cell.index === moveIndex ? 'move-half current' : 'move-half'}
+                          onClick={() => setMoveIndex(cell.index)}
+                        >
+                          <span className="desc">{describe(cell.move)}</span>
+                          {cell.move.comment && (
+                            <span className="move-comment" title={cell.move.comment}>💬</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {game.winner >= 0 && (
             <p className="winner">
               {game.winner === 0 ? match.player0 : match.player1} wins {game.points} point{game.points === 1 ? '' : 's'}
@@ -275,6 +410,41 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
       </div>
     </div>
   )
+}
+
+interface MoveCell {
+  move: MoveDto
+  index: number
+}
+
+interface MoveRow {
+  p0?: MoveCell
+  p1?: MoveCell
+}
+
+/** Fold the flat half-move list into two-column rows (player 0 left, player 1 right). */
+function buildMoveRows(moves: MoveDto[]): MoveRow[] {
+  const rows: MoveRow[] = []
+  let row: MoveRow = {}
+  let hasCell = false
+  for (let i = 0; i < moves.length; i++) {
+    const mv = moves[i]
+    const key = mv.player === 0 ? 'p0' : 'p1'
+    // A left-column move always opens a new row; so a lead opening by the
+    // right player stays alone with the left cell empty (gnubg convention).
+    const needNew = key === 'p0' ? hasCell : row[key] != null
+    if (needNew) {
+      rows.push(row)
+      row = {}
+      hasCell = false
+    }
+    row[key] = { move: mv, index: i }
+    hasCell = true
+  }
+  if (hasCell) {
+    rows.push(row)
+  }
+  return rows
 }
 
 /** Serialize a move's [from,to] pairs into a canonical string for comparison. */

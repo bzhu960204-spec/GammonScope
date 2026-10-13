@@ -47,7 +47,10 @@ public class ExportService {
                     cube = cube <= 1 ? 2 : cube * 2;
                 }
                 int col = move.getPlayer();
-                if (cur == null || cur[col] != null) {
+                // A left-column (player 0) move always opens a new row, so a lead
+                // opening by player 1 stays alone with the left cell empty.
+                boolean needNew = col == 0 ? cur != null : (cur == null || cur[col] != null);
+                if (needNew) {
                     cur = new String[2];
                     rows.add(cur);
                 }
@@ -56,7 +59,8 @@ public class ExportService {
             if (game.getWinner() >= 0 && game.getPoints() > 0) {
                 int col = game.getWinner();
                 String win = "Wins " + game.getPoints() + (game.getPoints() == 1 ? " point" : " points");
-                if (cur == null || cur[col] != null) {
+                boolean needNew = col == 0 ? cur != null : (cur == null || cur[col] != null);
+                if (needNew) {
                     cur = new String[2];
                     rows.add(cur);
                 }

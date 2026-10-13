@@ -66,10 +66,73 @@ code {
   border-radius: 4px;
 }
 
-.import-row {
+.dropzone {
+  margin-top: 0.5rem;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dropzone:hover {
+  border-color: var(--accent);
+}
+
+.dropzone.dragging {
+  border-color: var(--accent);
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.dropzone.busy {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.dropzone-title {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.upload-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
   display: flex;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.upload-item {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.upload-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-state {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.upload-item.done .upload-state {
+  color: var(--accent);
+}
+
+.upload-item.error .upload-state {
+  color: #f85149;
 }
 
 button {
@@ -201,6 +264,25 @@ button.ghost.danger {
   justify-content: center;
   gap: 0.5rem;
   margin-top: 0.5rem;
+}
+
+.view-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.view-controls button.ghost {
+  margin-left: 0;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+button.ghost.active {
+  background: var(--accent);
+  color: #06210a;
+  border-color: var(--accent);
 }
 
 .nav button {
@@ -403,39 +485,63 @@ button.ghost.danger {
   margin-top: 0;
 }
 
-.move-list ol {
-  list-style: decimal;
-  padding-left: 1.6rem;
-  margin: 0;
+.move-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  table-layout: fixed;
 }
 
-.move {
-  cursor: pointer;
-  padding: 0.25rem 0.3rem;
-  border-radius: 6px;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.move:hover {
-  background: var(--panel-2);
-}
-
-.move.current {
-  background: #243a24;
-}
-
-.who {
+.move-grid th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  text-align: left;
   font-weight: 600;
-  min-width: 70px;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.who.p0 {
+.move-grid th.move-col.p0 {
   color: #e8e2d0;
 }
 
-.who.p1 {
+.move-grid th.move-col.p1 {
   color: #9fb3c8;
+}
+
+.move-grid td.move-num,
+.move-grid th.move-num {
+  width: 2.2rem;
+  color: var(--muted);
+  text-align: right;
+  padding: 0 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.move-cell {
+  padding: 0.1rem 0.2rem;
+  vertical-align: top;
+}
+
+.move-half {
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.move-half:hover {
+  background: var(--panel-2);
+}
+
+.move-half.current {
+  background: #243a24;
 }
 
 .winner {
