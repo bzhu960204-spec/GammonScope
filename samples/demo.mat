@@ -1,0 +1,16 @@
+; [Event "GammonScope Demo"]
+; [Site "Local"]
+ 3 point match
+
+ Game 1
+ Alice : 0                            Bob : 0
+  1) 31: 8/5 6/5                       65: 24/18 13/8
+  2) 62: 24/18 13/11                   42: 8/4 6/4
+  3) 11: 8/7 8/7 6/5 6/5               Doubles => 2
+  4) Takes                             33: 24/21 24/21 13/10 13/10
+  5) 61: 13/7 8/7                      Wins 2 points
+
+ Game 2
+ Alice : 0                            Bob : 2
+  1) 54: 24/20 13/8                    31: 8/5 6/5
+  2) Wins 1 point
