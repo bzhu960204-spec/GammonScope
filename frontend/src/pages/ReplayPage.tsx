@@ -395,8 +395,8 @@ export default function ReplayPage({ matchId: id, onBack }: Props) {
             <thead>
               <tr>
                 <th className="move-num">#</th>
-                <th className="move-col p0">{match.player0}</th>
-                <th className="move-col p1">{match.player1}</th>
+                <th className="move-col p0" title={match.player0}>{match.player0}</th>
+                <th className="move-col p1" title={match.player1}>{match.player1}</th>
               </tr>
             </thead>
             <tbody>

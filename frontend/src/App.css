@@ -554,33 +554,42 @@ button.ghost.active {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 0 1rem 1rem;
   max-height: 640px;
   overflow-y: auto;
 }
 
 .move-list h3 {
-  margin-top: 0;
+  margin: 1rem 0 0.5rem;
 }
 
 .move-grid {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.9rem;
   table-layout: fixed;
+}
+
+/* Sticky must be on the row group / row, not the cell: a sticky <th> only
+   pins within its own row band, so the header scrolled away with the content. */
+.move-grid thead,
+.move-grid thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .move-grid th {
   position: sticky;
   top: 0;
+  z-index: 1;
   background: var(--panel);
   text-align: left;
   font-weight: 600;
   padding: 0.3rem 0.4rem;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  box-shadow: inset 0 -1px 0 var(--border);
+  overflow-wrap: anywhere;
 }
 
 .move-grid th.move-col.p0 {
